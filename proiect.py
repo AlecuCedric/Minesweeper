@@ -1,19 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 18 12:49:34 2024
-
-@author: senapi
-"""
-
 import tkinter as tk
 import random
-from playsound import playsound
 import threading
 import json
 import os
+import pygame
+
+# Initialize the pygame mixer for audio
+pygame.mixer.init()
 
 def play_bomb_sound():
-    threading.Thread(target=playsound, args=("bomb_sound.wav",), daemon=True).start()
+    # Load the sound file and play it
+    pygame.mixer.Sound("bomb_sound.wav").play()
 
 class LeaderboardManager:
     def __init__(self, filename='leaderboard.json'):
@@ -131,31 +128,34 @@ class Minesweeper:
         self.start_time = threading.Timer(1, self.increment_score).start()
 
     def generate_board(self):
-        # Place bombs
+        # Plasarea bombelor
         self.bombs = set(random.sample(range(self.grid_size * self.grid_size), self.bomb_count))
         directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-
-        # Initialize the board with zeros
+    
+        # Inițializare tablă cu valori implicite (0 pentru casetele goale)
         for i in range(self.grid_size):
             for j in range(self.grid_size):
                 self.board[i][j] = 0
-
+    
+        # Plasarea bombelor
         for bomb in self.bombs:
             x, y = divmod(bomb, self.grid_size)
             self.board[x][y] = "B"
-
-            # Update numbers around the bomb
+    
+            # Actualizarea numerelor din jurul bombei
             for dx, dy in directions:
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[nx][ny] != "B":
                     self.board[nx][ny] += 1
-
-        # Replace non-bomb tiles with either numbers (1 or 2) or blanks ("")
+    
+        # Atribuirea valorilor finale pentru casetele care nu sunt bombe
         for i in range(self.grid_size):
             for j in range(self.grid_size):
-                if self.board[i][j] != "B":
-                    self.board[i][j] = self.board[i][j] if self.board[i][j] in (1, 2) else ""
-
+                if self.board[i][j] != "B" and self.board[i][j] == 0:
+                    self.board[i][j] = ""  # Lasă caseta goală dacă nu sunt bombe adiacente
+                elif self.board[i][j] == 0:  # Dacă este o casetă goală, o lăsăm goală
+                    self.board[i][j] = ""
+    
     def reveal_tile(self, i, j):
         if self.board[i][j] == "B":
             self.buttons[i][j].config(text="💣", bg="red", state="disabled")
@@ -172,7 +172,6 @@ class Minesweeper:
             self.game_win()
 
     def reveal_blank(self, i, j):
-        # Use BFS/DFS to reveal connected blank spaces
         stack = [(i, j)]
         visited = set()
 
